@@ -1,6 +1,7 @@
 import tkinter as tk
 from sheet_music import SheetMusic
 from midi import MidiEditor
+from video import VideoEditor
 
 
 class App(tk.Tk):
@@ -9,10 +10,10 @@ class App(tk.Tk):
         self.geometry("1280x720")
 
         self.frames = {}
-        for frame in [SheetMusic, MidiEditor]:
+        for frame in [SheetMusic, MidiEditor, VideoEditor]:
             new_frame = frame(self)
             self.frames[frame.name] = new_frame  # Initialise every frame
-        self.show_frame('sheetmusic')
+        self.show_frame('video')
 
     def show_frame(self, frame_id):
         frame = self.frames[frame_id]

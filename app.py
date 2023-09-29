@@ -12,7 +12,7 @@ class App(tk.Tk):
         for frame in [SheetMusic, MidiEditor]:
             new_frame = frame(self)
             self.frames[frame.name] = new_frame  # Initialise every frame
-        self.show_frame('midi')
+        self.show_frame('sheetmusic')
 
     def show_frame(self, frame_id):
         frame = self.frames[frame_id]

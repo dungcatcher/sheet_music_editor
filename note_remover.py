@@ -20,10 +20,12 @@ def remove_stave(data_range, image, x_thresh, y_thresh, recursions=2):
     staves = get_stave_lines(data_range, image, x_thresh)
     bar_lines = get_bar_lines(data_range, image, y_thresh)
 
-    image = recurse_pixels(image, staves, recursions, 'horizontal')
-    image = recurse_pixels(image, bar_lines, recursions, 'vertical')
+    image_copy = image.copy()
 
-    return image
+    image_copy = recurse_pixels(image_copy, staves, recursions, 'horizontal')
+    image_copy = recurse_pixels(image_copy, bar_lines, recursions, 'vertical')
+
+    return image_copy
 
 
 def recurse_pixels(image, pixels, recursions, orientation):

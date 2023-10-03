@@ -146,7 +146,7 @@ class SheetMusic(tk.Frame):
                     self.img_data_history.append(self.orig_img_data)
                     self.undo_button.configure(state=tk.ACTIVE)
                     self.canvas.configure(cursor='watch')
-                    new_img = remove_stave(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
+                    new_img = remove_notes(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
                     self.place_image(new_img)
 
                     self.select1 = None

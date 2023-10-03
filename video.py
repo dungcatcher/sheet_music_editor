@@ -49,9 +49,9 @@ class VideoEditor(tk.Frame):
         self.note_viewer_image = self.note_viewer.create_image(0, 0, anchor='nw', image=self.page_imgs[self.page - 1])
 
         self.last_note_images = []  # ImageTK
-        self.notes = {
-            'r': [], 'l': [], 'symbols': []
-        }  # Map of voices and list of notes {'timing', 'animation', 'duration}
+        with open('notes.json') as f:  # [{'r': [] ...}, {'r': [] ...} ...]
+            self.notes = json.load(f)
+
         self.history = []
 
         self.play_pause_button = tk.Button(self, text='Play', command=self.play_pause)
@@ -62,7 +62,7 @@ class VideoEditor(tk.Frame):
         self.progress_slider.grid(row=10, column=4, sticky='news', padx=3, pady=3, columnspan=5)
 
         self.speed_var = tk.StringVar(self, '1x')
-        self.speed_dropdown = tk.OptionMenu(self, self.speed_var, '1x', '0.5x', '0.25x', '0.125x', '0.0625x')
+        self.speed_dropdown = tk.OptionMenu(self, self.speed_var, '1x', '0.5x', '0.25x', '0.125x', '0.0625x', '0.02x')
         self.speed_dropdown.grid(row=10, column=9, sticky='news', padx=3, pady=3)
 
         # Voice input buttons
@@ -73,6 +73,7 @@ class VideoEditor(tk.Frame):
         self.rh_on = tk.IntVar()
         self.lh_on = tk.IntVar()
         self.symbol_on = tk.IntVar()
+        self.extra_on = tk.IntVar()
         
         self.check_box_frame = tk.Frame(self)
         self.check_box_frame.grid(row=11, column=0, rowspan=1, columnspan=1)
@@ -82,6 +83,8 @@ class VideoEditor(tk.Frame):
         self.lh_check_box.pack()
         self.symbol_check_box = tk.Checkbutton(self.check_box_frame, text='Symbol', variable=self.symbol_on)
         self.symbol_check_box.pack()
+        self.extra_check_box = tk.Checkbutton(self.check_box_frame, text='Extra', variable=self.extra_on)
+        self.extra_check_box.pack()
 
         self.fast_place_frame = tk.Frame(self)
         self.fast_place_frame.grid(row=12, column=0)
@@ -105,21 +108,38 @@ class VideoEditor(tk.Frame):
         self.duration_button = tk.Button(self.duration_frame, text='Enter', command=self.get_animation_duration)
         self.duration_button.pack()
 
-        self.guidelines = []  # List of timings
+        with open('misc.json') as f:
+            self.misc_data = json.load(f)
+            self.misc_data.setdefault('guidelines', [])
+            self.misc_data.setdefault('pagebreaks', [])
+
+        if len(self.notes) <= len(self.misc_data['pagebreaks']):
+            self.create_new_page()
 
         self.place_frame = tk.Frame(self)
         self.place_frame.grid(row=11, column=1)
-        self.place_note_button = tk.Button(self.place_frame, text='Place Voice', command=self.place_voice_button)
+        self.place_note_button = tk.Button(self.place_frame, text='Place voice', command=self.place_voice_button)
         self.place_note_button.pack(fill='both')
         self.place_guideline_button = tk.Button(self.place_frame, text='Place guideline', command=self.place_guideline)
         self.place_guideline_button.pack()
 
-        self.place_mode = tk.StringVar(self, 'on')
-        self.place_mode_menu = tk.OptionMenu(self.place_frame, self.place_mode, 'on', 'before')
+        self.pagebreak_button = tk.Button(self.place_frame, text='Pagebreak', command=self.place_pagebreak)
+        self.pagebreak_button.pack(fill='both')
+
+        self.place_mode = tk.StringVar(self, 'before')
+        self.place_mode_menu = tk.OptionMenu(self.place_frame, self.place_mode, 'before', 'on')
         self.place_mode_menu.pack(fill='both')
 
-        self.save_button = tk.Button(self, text='Save Notes', command=self.save_json)
-        self.save_button.grid(row=13, column=1)
+        self.animation_type = tk.StringVar(self, 'fade')
+        self.animation_type_menu = tk.OptionMenu(self.place_frame, self.animation_type, 'fade', 'glow', 'slide')
+        self.animation_type_menu.pack(fill='both')
+
+        self.save_clear_frame = tk.Frame(self)
+        self.save_clear_frame.grid(row=13, column=1)
+        self.save_button = tk.Button(self.save_clear_frame, text='Save Notes', command=self.save_json)
+        self.save_button.pack()
+        self.clear_button = tk.Button(self.save_clear_frame, text='Clear page', command=self.clear)
+        self.clear_button.pack()
 
         self.undo_button = tk.Button(self, text='Undo', command=self.undo, state=tk.DISABLED)
         self.undo_button.grid(row=13, column=0)
@@ -137,6 +157,12 @@ class VideoEditor(tk.Frame):
         self.playback_elements = []
         self.update_voice_input(event=None)
 
+    def create_new_page(self):
+        new_page = {
+            'r': [], 'l': [], 'symbols': [], 'extra': []
+        }
+        self.notes.append(new_page)
+
     def undo(self):
         recent = self.history[-1]
         self.notes = recent
@@ -147,6 +173,24 @@ class VideoEditor(tk.Frame):
         if not self.history:
             self.undo_button.configure(state=tk.DISABLED)
 
+    def clear(self):
+        self.notes[-1] = {
+            'r': [], 'l': [], 'symbols': [], 'extra': []
+        }
+        new_guidelines = []
+        for line in self.misc_data['guidelines']:
+            if line <= self.misc_data['pagebreaks'][-1]:
+                new_guidelines.append(line)
+        self.misc_data['guidelines'] = new_guidelines
+        self.misc_data = {'guidelines': [], 'pagebreaks': []}
+        with open('notes.json', 'w') as f:
+            json.dump(self.notes, f)
+        with open('misc.json', 'w') as f:
+            json.dump(self.misc_data, f)
+
+        self.update_note_viewer()
+        self.update_voice_input(event=None)
+
     def fast_place(self):
         text = self.fast_place_text.get("1.0", 'end-1c')
         split_hyphens = text.split('-')
@@ -156,9 +200,9 @@ class VideoEditor(tk.Frame):
                 end_guideline_idx = int(split_hyphens[1]) - 1
                 num_notes = int(split_hyphens[2])
 
-                if start_guideline_idx < end_guideline_idx < len(self.guidelines):
-                    start_duration = self.guidelines[start_guideline_idx]
-                    graduation = (self.guidelines[end_guideline_idx] - start_duration) / num_notes
+                if start_guideline_idx < end_guideline_idx < len(self.misc_data['guidelines']):
+                    start_duration = self.misc_data['guidelines'][start_guideline_idx]
+                    graduation = (self.misc_data['guidelines'][end_guideline_idx] - start_duration) / num_notes
                     for i in range(num_notes):
                         duration = start_duration + i * graduation
                         self.place_voice(duration)
@@ -205,16 +249,18 @@ class VideoEditor(tk.Frame):
             self.note_viewer.delete(image)
         self.last_note_images = []
 
-        for voice, notes in self.notes.items():
+        for voice, notes in self.notes[self.page - 1].items():
             if notes:
                 note_id = len(notes)
                 filepath = ''
                 if voice == 'r':
-                    filepath = f'Notes/Page {self.page}/RH/r{note_id}.png'
+                    filepath = f'Notes/Page{self.page}/RH/r{note_id}.png'
                 if voice == 'l':
-                    filepath = f'Notes/Page {self.page}/LH/l{note_id}.png'
+                    filepath = f'Notes/Page{self.page}/LH/l{note_id}.png'
                 if voice == 'symbols':
-                    filepath = f'Notes/Page {self.page}/Symbols/s{note_id}.png'
+                    filepath = f'Notes/Page{self.page}/Symbols/s{note_id}.png'
+                if voice == 'extra':
+                    filepath = f'Notes/Page{self.page}/Extra/e{note_id}.png'
 
                 if os.path.isfile(filepath):
                     img_data = Image.open(filepath).convert("RGBA")
@@ -227,6 +273,8 @@ class VideoEditor(tk.Frame):
                         g = g.point(lambda i: i + 200)
                     if voice == 'symbols':
                         g = g.point(lambda i: i + 200)
+                    if voice == 'extra':
+                        b = b.point(lambda i: i + 200)
                     new_image = Image.merge('RGBA', (r, g, b, a))
 
                     scaled_img_data = new_image.resize((384, 440))
@@ -239,8 +287,8 @@ class VideoEditor(tk.Frame):
 
     def check_note_placeable(self, note, voice):
         # Can't be before an existing note or on an existing note
-        if self.notes[voice]:
-            last_note = self.notes[voice][-1]
+        if self.notes[self.page - 1][voice]:
+            last_note = self.notes[self.page - 1][voice][-1]
             if note['timing'] > last_note['timing']:
                 return True
             else:
@@ -254,7 +302,7 @@ class VideoEditor(tk.Frame):
 
     def place_voice(self, duration):
         timing = duration if self.place_mode.get() == 'on' else duration - self.animation_duration
-        new_note = {'timing': timing, 'animation': 'fade', 'duration': self.animation_duration}
+        new_note = {'timing': timing, 'animation': self.animation_type.get(), 'duration': self.animation_duration}
 
         placeable_voices = []
 
@@ -264,13 +312,18 @@ class VideoEditor(tk.Frame):
             placeable_voices.append('l')
         if self.symbol_on.get() and self.check_note_placeable(new_note, 'symbols'):
             placeable_voices.append('symbols')
-        if not (self.rh_on.get() or self.lh_on.get() or self.symbol_on.get()):
+        if self.extra_on.get() and self.check_note_placeable(new_note, 'extra'):
+            placeable_voices.append('extra')
+        if not (self.rh_on.get() or self.lh_on.get() or self.symbol_on.get() or self.extra_on.get()):
             return
 
         for voice in placeable_voices:
             self.history.append(deepcopy(self.notes))
-            self.notes[voice].append(new_note)
+            self.notes[self.page - 1][voice].append(new_note)
             self.undo_button.configure(state=tk.ACTIVE)
+
+        with open('notes.json', 'w') as f:
+            json.dump(self.notes, f)
 
         self.update_note_viewer()
         self.update_voice_input(event=None)
@@ -279,22 +332,52 @@ class VideoEditor(tk.Frame):
         current_duration = self.video_player.current_duration()
         can_place = False
 
-        if self.guidelines:
-            if current_duration > self.guidelines[-1]:
+        if self.misc_data['guidelines']:
+            if current_duration > self.misc_data['guidelines'][-1]:
                 can_place = True
         else:
             can_place = True
 
         if can_place:
-            self.guidelines.append(current_duration)
+            self.misc_data['guidelines'].append(current_duration)
+            with open('misc.json', 'w') as f:
+                json.dump(self.misc_data, f)
 
-        print(self.guidelines)
+        self.update_voice_input(event=None)
+
+    def place_pagebreak(self):
+        current_duration = self.video_player.current_duration()
+        can_place = False
+
+        if self.misc_data['pagebreaks']:
+            if current_duration > self.misc_data['pagebreaks'][-1]:
+                can_place = True
+        else:
+            can_place = True
+
+        if can_place:
+            self.misc_data['pagebreaks'].append(current_duration)
+            with open('misc.json', 'w') as f:
+                json.dump(self.misc_data, f)
+
+        if len(self.notes) <= len(self.misc_data['pagebreaks']):
+            self.create_new_page()
         self.update_voice_input(event=None)
 
     def update_voice_input(self, event):
         current_duration = self.video_player.current_duration()
         left_frame = (current_duration // self.view_width) * self.view_width
         playback_rel_x = (current_duration % self.view_width) / self.view_width
+
+        # Get the page number
+        max_idx = 0
+        for i, page_break in enumerate(self.misc_data['pagebreaks']):
+            if current_duration > page_break:
+                max_idx = i + 1
+        if max_idx + 1 != self.page:  # Page has changed
+            self.page = max_idx + 1
+            self.note_viewer_image = self.note_viewer.create_image(0, 0, anchor='nw',
+                                                                   image=self.page_imgs[self.page - 1])
 
         self.voice_input_items = []  # Clear everything
 
@@ -307,30 +390,50 @@ class VideoEditor(tk.Frame):
 
         self.voice_input_canvas.delete('note')
 
-        for voice, notes in self.notes.items():
-            for note in notes:
-                x_val = (note['timing'] - left_frame) / self.view_width
-                y_val = 0
-                colour = 'red'
-                if voice == 'l':
-                    y_val = 1
-                    colour = 'yellow'
-                elif voice == 'symbols':
-                    y_val = 2
-                    colour = 'green'
+        for page in self.notes:
+            for voice, notes in page.items():
+                for note in notes:
+                    x_val = (note['timing'] - left_frame) / self.view_width
+                    y_val = 0
+                    colour = 'red'
+                    if voice == 'l':
+                        y_val = 1
+                        colour = 'yellow'
+                    elif voice == 'symbols':
+                        y_val = 2
+                        colour = 'green'
+                    elif voice == 'extra':
+                        y_val = 3
+                        colour = 'blue'
 
-                new_circle = self.voice_input_canvas.create_oval(x_val * 896 - 5, 20 + 255 / 6 + y_val * (255 / 3),
-                                                                 x_val * 896 + 5, 30 + 255 / 6 + y_val * (255 / 3), fill=colour, tags='note')
-                self.voice_input_items.append(new_circle)
+                    new_circle = self.voice_input_canvas.create_oval(x_val * 896 - 5, 20 + 255 / 8 + y_val * (255 / 4),
+                                                                     x_val * 896 + 5, 30 + 255 / 8 + y_val * (255 / 4), fill=colour, tags='note', outline='white')
+                    self.voice_input_items.append(new_circle)
+
+                    fade_line = self.voice_input_canvas.create_line(x_val * 896, 25 + 255 / 8 + y_val * (255 / 4),
+                                                                    (x_val + note['duration'] / self.view_width) * 896, 25 + 255 / 8 + y_val * (255 / 4), fill='white', tags='note')
+                    self.voice_input_items.append(fade_line)
 
         self.voice_input_canvas.delete('guideline')
 
-        for i, duration in enumerate(self.guidelines):
+        for i, duration in enumerate(self.misc_data['guidelines']):
             x_val = (duration - left_frame) / self.view_width
             new_line = self.voice_input_canvas.create_line(x_val * 896, 0, x_val * 896, 280, fill='grey', tags='guideline')
             self.voice_input_items.append(new_line)
 
             line_text = self.voice_input_canvas.create_text(x_val * 896, 260, anchor='sw', text=str(i + 1), fill='grey', tags='guideline', font='Arial 10')
+            self.voice_input_items.append(line_text)
+
+        self.voice_input_canvas.delete('pagebreak')
+
+        for i, duration in enumerate(self.misc_data['pagebreaks']):
+            x_val = (duration - left_frame) / self.view_width
+            new_line = self.voice_input_canvas.create_line(x_val * 896, 0, x_val * 896, 280, fill='cyan', dash=(5, 1),
+                                                           tags='pagebreak')
+            self.voice_input_items.append(new_line)
+
+            line_text = self.voice_input_canvas.create_text(x_val * 896, 260, anchor='se', text=str(i + 1), fill='cyan',
+                                                            tags='pagebreak', font='Arial 10')
             self.voice_input_items.append(line_text)
 
 """

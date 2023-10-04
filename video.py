@@ -5,6 +5,7 @@ import os
 import json
 from copy import deepcopy
 from PIL import Image, ImageTk
+from cropper import get_bounding_boxes
 
 
 class VideoEditor(tk.Frame):
@@ -51,6 +52,8 @@ class VideoEditor(tk.Frame):
         self.last_note_images = []  # ImageTK
         with open('notes.json') as f:  # [{'r': [] ...}, {'r': [] ...} ...]
             self.notes = json.load(f)
+
+        # get_bounding_boxes()
 
         self.history = []
 
@@ -131,7 +134,7 @@ class VideoEditor(tk.Frame):
         self.place_mode_menu.pack(fill='both')
 
         self.animation_type = tk.StringVar(self, 'fade')
-        self.animation_type_menu = tk.OptionMenu(self.place_frame, self.animation_type, 'fade', 'glow', 'slide')
+        self.animation_type_menu = tk.OptionMenu(self.place_frame, self.animation_type, 'fade', 'glow', 'slide', 'drop')
         self.animation_type_menu.pack(fill='both')
 
         self.save_clear_frame = tk.Frame(self)
@@ -156,6 +159,21 @@ class VideoEditor(tk.Frame):
         self.playback_line = None
         self.playback_elements = []
         self.update_voice_input(event=None)
+
+        self.set_notes(1, 'extra', 0.5, None, None)
+
+    def set_notes(self, page, voice, new_duration, direction, shift):
+        voice_notes = self.notes[page - 1][voice]
+        for i, note in enumerate(voice_notes):
+            self.notes[page - 1][voice][i]['duration'] = new_duration
+            if direction:
+                if direction == 'back':
+                    self.notes[page - 1][voice][i]['timing'] -= shift
+                if direction == 'forward':
+                    self.notes[page - 1][voice][i]['timing'] += shift
+
+        with open('notes.json', 'w') as f:
+            json.dump(self.notes, f)
 
     def create_new_page(self):
         new_page = {
@@ -182,7 +200,6 @@ class VideoEditor(tk.Frame):
             if line <= self.misc_data['pagebreaks'][-1]:
                 new_guidelines.append(line)
         self.misc_data['guidelines'] = new_guidelines
-        self.misc_data = {'guidelines': [], 'pagebreaks': []}
         with open('notes.json', 'w') as f:
             json.dump(self.notes, f)
         with open('misc.json', 'w') as f:

@@ -147,6 +147,15 @@ class VideoEditor(tk.Frame):
         self.undo_button = tk.Button(self, text='Undo', command=self.undo, state=tk.DISABLED)
         self.undo_button.grid(row=13, column=0)
 
+        self.from_to_frame = tk.Frame(self)
+        self.from_to_frame.grid(row=12, column=2)
+        self.from_to_label = tk.Label(self.from_to_frame, text='From to place')
+        self.from_to_label.pack()
+        self.from_to_input = tk.Text(self.from_to_frame, width=10, height=1)
+        self.from_to_input.pack()
+        self.from_to_enter = tk.Button(self.from_to_frame, text='Enter', command=self.from_to_place)
+        self.from_to_enter.pack()
+
         # Voice input
 
         self.voice_input_canvas = tk.Canvas(self, width=896, height=280, background='#1f2947')
@@ -160,9 +169,29 @@ class VideoEditor(tk.Frame):
         self.playback_elements = []
         self.update_voice_input(event=None)
 
-        self.set_notes(1, 'extra', 0.5, None, None)
+        self.get_notes(4, 'symbols')
+        # self.set_notes(1, 'extra', 0.5, None, None)
+        # voice_notes = self.notes[11 - 1]['l']
+        # for i, note in enumerate(voice_notes):
+        #     # if i != len(voice_notes) - 1:
+        #     #     if voice_notes[i + 1]['timing'] - note['timing'] <= 0.23:
+        #     #         self.notes[10 - 1]['extra'][i]['animation'] = 'glow1'
+        #     #         self.notes[10 - 1]['extra'][i]['duration'] = voice_notes[i + 1]['timing'] - note['timing']
+        #     #     else:
+        #     #         self.notes[10 - 1]['extra'][i]['duration'] = 0.5
+        #     if voice_notes[i]['animation'] == 'drop':
+        #         self.notes[10]['l'][i]['duration'] = 0.25
 
-    def set_notes(self, page, voice, new_duration, direction, shift):
+
+        # with open('notes.json', 'w') as f:
+        #     json.dump(self.notes, f)
+
+    def get_notes(self, page, voice):
+        voice_notes = self.notes[page - 1][voice]
+        for note in voice_notes:
+            print(note)
+
+    def set_notes(self, page, voice, new_duration, direction, shift, animation=None):
         voice_notes = self.notes[page - 1][voice]
         for i, note in enumerate(voice_notes):
             self.notes[page - 1][voice][i]['duration'] = new_duration
@@ -171,9 +200,35 @@ class VideoEditor(tk.Frame):
                     self.notes[page - 1][voice][i]['timing'] -= shift
                 if direction == 'forward':
                     self.notes[page - 1][voice][i]['timing'] += shift
+            if animation:
+                self.notes[page - 1][voice][i]['animation'] = animation
 
         with open('notes.json', 'w') as f:
             json.dump(self.notes, f)
+
+    def from_to_place(self):
+        text = self.from_to_input.get("1.0", 'end-1c')
+        split_hyphens = text.split('-')
+        if len(split_hyphens) == 2:
+            try:
+                start_guideline_idx = int(split_hyphens[0]) - 1
+                end_guideline_idx = int(split_hyphens[1]) - 1
+                if start_guideline_idx < end_guideline_idx < len(self.misc_data['guidelines']):
+                    start_timing = self.misc_data['guidelines'][start_guideline_idx]
+                    duration = self.misc_data['guidelines'][end_guideline_idx] - start_timing
+                    print(start_timing, duration)
+
+                    new_note = {'timing': start_timing, 'animation': self.animation_type.get(), 'duration': duration}
+                    self.history.append(deepcopy(self.notes))
+                    self.notes[self.page - 1]['symbols'].append(new_note)
+                    self.undo_button.configure(state=tk.ACTIVE)
+                with open('notes.json', 'w') as f:
+                    json.dump(self.notes, f)
+
+                self.update_note_viewer()
+                self.update_voice_input(event=None)
+            except ValueError:
+                return
 
     def create_new_page(self):
         new_page = {

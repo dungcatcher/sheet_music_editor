@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from PIL import Image, ImageTk
-from note_remover import remove_notes, remove_stave
+from note_remover import remove_notes
+from funnyGPUshaderShit import remove_stave
 
 
 def handle_selection_area(selection1, selection2):

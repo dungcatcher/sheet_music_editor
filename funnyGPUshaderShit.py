@@ -12,10 +12,12 @@ def remove_stave(data_range, image, x_thresh, y_thresh, recursions=2):
     # The most crap way of doing it
     # Is there a way of running this only on the bar line and maybe the 2 lines above and below
 
+    image_copy = image.copy()
+
     x1, y1 = data_range[0]
     x2, y2 = data_range[1]
 
-    cropped_image = image.crop((x1 - 4, y1 - 4, x2 + 4, y2 + 4))
+    cropped_image = image_copy.crop((x1 - 4, y1 - 4, x2 + 4, y2 + 4))
 
     cropped_image.save('input.png')
     mask_image_path = 'mask.png'
@@ -25,9 +27,9 @@ def remove_stave(data_range, image, x_thresh, y_thresh, recursions=2):
     width, height = output_image.size
     output_image = output_image.crop((4, 4, width - 4, height - 4))
 
-    image.paste(output_image, (x1, y1), output_image)
+    image_copy.paste(output_image, (x1, y1), output_image)
 
-    return image
+    return image_copy
 
 
 def apply_shader(input_image, mask_image_path, fragment_shader_path):

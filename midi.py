@@ -93,7 +93,7 @@ class MidiEditor(tk.Frame):
         self.view_x_offset = 0
         self.view_y_offset = 30  # Lowest note
 
-        self.notes = parse_notes('bach1.midi')
+        self.notes = [] # parse_notes('bach1.midi')
         self.canvas_items = []
         self.canvas_notes = []
         self.init_canvas()

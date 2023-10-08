@@ -169,23 +169,6 @@ class VideoEditor(tk.Frame):
         self.playback_elements = []
         self.update_voice_input(event=None)
 
-        self.get_notes(4, 'symbols')
-        # self.set_notes(1, 'extra', 0.5, None, None)
-        # voice_notes = self.notes[11 - 1]['l']
-        # for i, note in enumerate(voice_notes):
-        #     # if i != len(voice_notes) - 1:
-        #     #     if voice_notes[i + 1]['timing'] - note['timing'] <= 0.23:
-        #     #         self.notes[10 - 1]['extra'][i]['animation'] = 'glow1'
-        #     #         self.notes[10 - 1]['extra'][i]['duration'] = voice_notes[i + 1]['timing'] - note['timing']
-        #     #     else:
-        #     #         self.notes[10 - 1]['extra'][i]['duration'] = 0.5
-        #     if voice_notes[i]['animation'] == 'drop':
-        #         self.notes[10]['l'][i]['duration'] = 0.25
-
-
-        # with open('notes.json', 'w') as f:
-        #     json.dump(self.notes, f)
-
     def get_notes(self, page, voice):
         voice_notes = self.notes[page - 1][voice]
         for note in voice_notes:

@@ -55,6 +55,10 @@ class SheetMusic(tk.Frame):
         self.undo_button = tk.Button(self, text='Undo', command=self.undo, state=tk.DISABLED)
         self.undo_button.grid(row=5, column=0, sticky='w', padx=10)
 
+        self.remove_mode = tk.StringVar(self, 'notes')
+        self.remove_mode_dropdown = tk.OptionMenu(self, self.remove_mode, 'notes', 'lines')
+        self.remove_mode_dropdown.grid(row=6, column=0, sticky='w', padx=10)
+
         # ---------- Canvas ---------------
 
         self.canvas = tk.Canvas(self, background='lightgrey', width=800, height=720)
@@ -146,7 +150,10 @@ class SheetMusic(tk.Frame):
                     self.img_data_history.append(self.orig_img_data)
                     self.undo_button.configure(state=tk.ACTIVE)
                     self.canvas.configure(cursor='watch')
-                    new_img = remove_notes(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
+                    if self.remove_mode.get() == 'notes':
+                        new_img = remove_notes(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
+                    else:
+                        new_img = remove_stave(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
                     self.place_image(new_img)
 
                     self.select1 = None

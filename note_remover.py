@@ -16,7 +16,7 @@ def remove_notes(data_range, image, x_thresh, y_thresh):
     return image_copy
 
 
-def remove_stave(data_range, image, x_thresh, y_thresh, recursions=2):
+def remove_stave(data_range, image, x_thresh, y_thresh, recursions=4):
     staves = get_stave_lines(data_range, image, x_thresh)
     bar_lines = get_bar_lines(data_range, image, y_thresh)
 

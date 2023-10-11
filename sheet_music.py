@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 from PIL import Image, ImageTk
-from note_remover import remove_notes
-from funnyGPUshaderShit import remove_stave
+from note_remover import remove_notes, remove_stave
 
 
 def handle_selection_area(selection1, selection2):
@@ -155,6 +154,7 @@ class SheetMusic(tk.Frame):
                         new_img = remove_notes(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
                     else:
                         new_img = remove_stave(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
+                        # new_img = remove_stave(self.selection_area, self.orig_img_data, self.x_thresh_var.get(), self.y_thresh_var.get())
                     self.place_image(new_img)
 
                     self.select1 = None

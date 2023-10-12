@@ -1,4 +1,4 @@
-from PIL import ImageDraw
+from PIL import ImageDraw, ImageOps
 import cv2
 import numpy as np
 
@@ -19,18 +19,36 @@ def remove_notes(data_range, image, x_thresh, y_thresh):
 
 
 def remove_stave(data_range, image, x_thresh, y_thresh, recursions=3):
-    staves = get_stave_lines2(data_range, image, x_thresh)
+    staves = get_stave_lines(data_range, image, x_thresh)
     # bar_lines = get_bar_lines(data_range, image, y_thresh)
 
     image_copy = image.copy()
 
-    blackout = ImageDraw.Draw(image_copy)
-    blackout.rectangle(data_range, fill="#ffffff")
-    # for pixel in staves:
-    #     image_copy.putpixel(pixel, 255)
-    #
+    # blackout = ImageDraw.Draw(image_copy)
+    # blackout.rectangle(data_range, fill="#ffffff")
+    for pixel in staves:
+        image_copy.putpixel(pixel, 255)
+
+    image_array = image.copy()
+    image_array = image_array.crop((data_range[0][0], data_range[0][1], data_range[1][0], data_range[1][1]))
+    image_array = np.array(image_array)
+
+    thresh = cv2.threshold(image_array, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 5))
+    image_array = np.invert(cv2.morphologyEx(thresh, cv2.MORPH_OPEN, horizontal_kernel, iterations=1))
+    image_array = image_array.tolist()
+
+    for y, row in enumerate(image_array):
+        for x, col in enumerate(row):
+            pixel_val = int(image_array[y][x])
+            pixel_x = x + data_range[0][0]
+            pixel_y = y + data_range[0][1]
+
+            if pixel_val == 0:
+                image_copy.putpixel((pixel_x, pixel_y), pixel_val)
+
     # return image_copy
-    image_copy = recurse_pixels(image, staves, recursions, 'horizontal')
+    # image_copy = recurse_pixels(image, staves, recursions, 'horizontal')
     # image_copy = recurse_pixels(image_copy, bar_lines, recursions, 'vertical')
 
     return image_copy
@@ -46,12 +64,12 @@ def get_stave_lines2(data_range, image, x_thresh):  # Updated function
 
     staves = get_stave_lines(data_range, image, x_thresh=x_thresh)  # Shit version
 
-    blur = cv2.GaussianBlur(image_copy, (3, 3), 0)
-    thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    # blur = cv2.GaussianBlur(image_copy, (3, 3), 0)
+    thresh = cv2.threshold(image_copy, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
     # Detect horizontal lines
-    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (50, 1))
-    horizontal_mask = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, horizontal_kernel, iterations=1)
+    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 5))
+    horizontal_mask = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, horizontal_kernel, iterations=1)
 
     # Detect vertical lines
     vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 50))
